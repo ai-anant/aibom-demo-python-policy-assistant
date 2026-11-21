@@ -12,10 +12,11 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .config import Settings
+from .hf_models import HuggingFaceModels
 
 _TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9\-']+")
 _STOPWORDS = {
@@ -96,9 +97,15 @@ class KeywordIndex:
 class KnowledgeBase:
     """Facade over the configured retrieval backend."""
 
-    def __init__(self, settings: Settings, kb_dir: Path) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        kb_dir: Path,
+        models: HuggingFaceModels | None = None,
+    ) -> None:
         self.settings = settings
         self.kb_dir = kb_dir
+        self.models = models
         self._chunks = load_documents(kb_dir)
         self._index = KeywordIndex(self._chunks)
         self._collection = None
@@ -111,13 +118,28 @@ class KnowledgeBase:
         limit = k or self.settings.top_k
         if self.settings.vector_store == "chroma":
             return self._retrieve_chroma(query, limit)
+
+        if self.models is not None and self.settings.use_hf_local:
+            candidates = self._index.search(query, max(limit * 3, limit))
+            ranked = self.models.rerank(
+                query, [chunk.text for chunk in candidates], limit
+            )
+            return [
+                replace(candidates[index], score=round(score, 4))
+                for index, score in ranked
+            ]
+
         return self._index.search(query, limit)
 
     def _retrieve_chroma(self, query: str, k: int) -> list[Chunk]:
         """Query a Chroma collection built from the same source documents."""
 
         collection = self._get_chroma_collection()
-        result = collection.query(query_texts=[query], n_results=k)
+        if self.models is not None:
+            vector = self.models.embed([query])[0]
+            result = collection.query(query_embeddings=[vector], n_results=k)
+        else:
+            result = collection.query(query_texts=[query], n_results=k)
         documents = (result.get("documents") or [[]])[0]
         metadatas = (result.get("metadatas") or [[]])[0]
         out: list[Chunk] = []
@@ -136,21 +158,25 @@ class KnowledgeBase:
             return self._collection
 
         import chromadb
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        from langchain_openai import OpenAIEmbeddings
-
-        if self.settings.provider == "openai":
-            embeddings = OpenAIEmbeddings(model=self.settings.embedding_model)
-        else:
-            embeddings = HuggingFaceEmbeddings(
-                model_name=self.settings.local_embedding_model
-            )
 
         client = chromadb.PersistentClient(path=".chroma")
         collection = client.get_or_create_collection(name=self.settings.collection)
         if collection.count() == 0:
+            from langchain_community.embeddings import HuggingFaceEmbeddings
+            from langchain_openai import OpenAIEmbeddings
+
             texts = [c.text for c in self._chunks]
-            vectors = embeddings.embed_documents(texts)
+            if self.models is not None:
+                vectors = self.models.embed(texts)
+            else:
+                embeddings = (
+                    OpenAIEmbeddings(model=self.settings.embedding_model)
+                    if self.settings.provider == "openai"
+                    else HuggingFaceEmbeddings(
+                        model_name=self.settings.local_embedding_model
+                    )
+                )
+                vectors = embeddings.embed_documents(texts)
             collection.add(
                 ids=[c.doc_id for c in self._chunks],
                 documents=texts,

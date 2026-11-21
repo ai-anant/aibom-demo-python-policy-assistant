@@ -53,6 +53,7 @@ which is what makes the report usable as a supply-chain artifact.
 | Asset type | Where it comes from |
 |---|---|
 | `model` | `config.py`, `providers.py`, `guardrails.py`, `examples/langchain_agent.py` |
+| `model` (Hugging Face) | `hf_models.py` — `all-MiniLM-L6-v2`, `ms-marco-MiniLM-L-6-v2`, `bart-large-mnli`, `toxic-bert` |
 | `embedding` | `rag.py` (`text-embedding-3-small`, `all-MiniLM-L6-v2`) |
 | `vector_store` | `rag.py` Chroma collection |
 | `prompt` | `prompts/system_prompt.txt`, `rag_answer_prompt.txt`, `escalation_summary_prompt.txt` (surfaced by the agentic pass, which inspects prompt files) |
@@ -65,12 +66,16 @@ which is what makes the report usable as a supply-chain artifact.
 ## 4. Verified deterministic output
 
 Running only the deterministic stage (Cisco AIBOM 1.10.1, no LLM) on this
-repository reports **28 components**, including:
+repository reports **33 components**, including:
 
 * models `gpt-4o-mini`, `gpt-4o`, `claude-sonnet-4-5`, `omni-moderation-latest`
+* Hugging Face models `sentence-transformers/all-MiniLM-L6-v2`,
+  `cross-encoder/ms-marco-MiniLM-L-6-v2`, `facebook/bart-large-mnli`,
+  `unitary/toxic-bert`
 * embeddings `text-embedding-3-small`, `sentence-transformers/all-MiniLM-L6-v2`
 * dataset assets for `data/eval/questions.jsonl`
-* dependency entries for `langchain*`, `openai`, `chromadb`, `datasets`
+* dependency entries for `langchain*`, `openai`, `chromadb`, `datasets`,
+  `sentence-transformers`
 * secret references for `OPENAI_API_KEY`
 
 The agentic pass adds prompt assets, removes false positives (for example a

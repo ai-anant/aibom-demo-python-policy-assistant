@@ -8,6 +8,7 @@ from pathlib import Path
 
 from . import guardrails
 from .config import KB_DIR, Settings
+from .hf_models import HuggingFaceModels
 from .prompts import (
     SYSTEM_PROMPT_FILE,
     build_escalation_prompt,
@@ -60,6 +61,7 @@ class Answer:
     escalated: bool = False
     provider: str = ""
     model: str = ""
+    topic: str = ""
 
 
 class PolicyAgent:
@@ -70,9 +72,13 @@ class PolicyAgent:
         settings: Settings | None = None,
         chat_model: ChatModel | None = None,
         kb_dir: Path | None = None,
+        models: HuggingFaceModels | None = None,
     ) -> None:
         self.settings = settings or Settings.from_env()
-        self.kb = KnowledgeBase(self.settings, kb_dir or KB_DIR)
+        if models is None and self.settings.use_hf_local:
+            models = HuggingFaceModels(self.settings)
+        self.models = models
+        self.kb = KnowledgeBase(self.settings, kb_dir or KB_DIR, models=models)
         self.chat = chat_model or build_chat_model(self.settings)
         self.system_prompt = load_prompt(SYSTEM_PROMPT_FILE)
         self._escalations: list[dict[str, str]] = []
@@ -89,6 +95,7 @@ class PolicyAgent:
             )
 
         chunks = self.kb.retrieve(question)
+        topic = self._classify_topic(question)
         prompt = build_rag_prompt(question, chunks)
         try:
             draft = self.chat.invoke(self.system_prompt, prompt)
@@ -99,6 +106,10 @@ class PolicyAgent:
         cleaned = guardrails.screen_output(draft, self.settings.redact_pii)
         answer = cleaned.text.strip()
 
+        if self._is_toxic(answer):
+            logger.warning("HF toxicity classifier blocked a draft answer")
+            return self._escalate(question, answer, chunks)
+
         if self._needs_escalation(answer):
             return self._escalate(question, answer, chunks)
 
@@ -107,6 +118,7 @@ class PolicyAgent:
             citations=[f"{c.title} ({c.doc_id})" for c in chunks],
             provider=self.settings.provider,
             model=self.chat.name,
+            topic=topic,
         )
 
     @property
@@ -114,6 +126,26 @@ class PolicyAgent:
         return list(self._escalations)
 
     # -- internals ----------------------------------------------------------
+    def _classify_topic(self, question: str) -> str:
+        if self.models is None:
+            return ""
+        try:
+            label, _score = self.models.topic(question)
+        except Exception as exc:  # model unavailable -> topic stays empty
+            logger.warning("HF topic classifier failed: %s", exc)
+            return ""
+        return label
+
+    def _is_toxic(self, answer: str) -> bool:
+        if self.models is None:
+            return False
+        try:
+            score = self.models.toxicity(answer)
+        except Exception as exc:
+            logger.warning("HF toxicity classifier failed: %s", exc)
+            return False
+        return score >= self.settings.toxicity_threshold
+
     @staticmethod
     def _needs_escalation(answer: str) -> bool:
         lowered = answer.lower()

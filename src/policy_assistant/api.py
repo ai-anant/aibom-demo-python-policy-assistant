@@ -24,6 +24,7 @@ class AskResponse(BaseModel):
     blocked: bool = False
     escalated: bool = False
     model: str = ""
+    topic: str = ""
 
 
 def create_app(agent: PolicyAgent | None = None) -> FastAPI:
@@ -51,6 +52,13 @@ def create_app(agent: PolicyAgent | None = None) -> FastAPI:
             "provider": settings.provider,
             "chat_model": settings.chat_model,
             "embedding_model": settings.embedding_model,
+            "huggingface_models": {
+                "embedding": settings.hf_embedding_model,
+                "reranker": settings.hf_reranker_model,
+                "topic": settings.hf_topic_model,
+                "toxicity": settings.hf_toxicity_model,
+            },
+            "hf_local_enabled": settings.use_hf_local,
             "documents": len(assistant.kb.documents),
         }
 
@@ -63,6 +71,7 @@ def create_app(agent: PolicyAgent | None = None) -> FastAPI:
             blocked=result.blocked,
             escalated=result.escalated,
             model=result.model,
+            topic=result.topic,
         )
 
     return app

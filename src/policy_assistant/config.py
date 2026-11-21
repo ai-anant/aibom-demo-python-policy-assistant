@@ -21,6 +21,19 @@ ANTHROPIC_CHAT_MODEL = "claude-sonnet-4-5"
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
+# --- Local Hugging Face models ----------------------------------------------
+# These run in-process through transformers / sentence-transformers.
+HF_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+HF_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+HF_TOPIC_MODEL = "facebook/bart-large-mnli"
+HF_TOXICITY_MODEL = "unitary/toxic-bert"
+HF_TOPIC_LABELS = (
+    "travel and expenses",
+    "remote work and equipment",
+    "acceptable use and AI security",
+    "benefits and leave",
+)
+
 # Hosted dataset used to bootstrap the offline evaluation set
 EVAL_DATASET = "bitext/Bitext-customer-support-llm-chatbot-training-dataset"
 
@@ -66,6 +79,15 @@ class Settings:
     max_tokens: int = 800
     top_k: int = 4
     redact_pii: bool = True
+    # Local Hugging Face models
+    use_hf_local: bool = False
+    hf_device: str = "cpu"
+    hf_embedding_model: str = HF_EMBEDDING_MODEL
+    hf_reranker_model: str = HF_RERANKER_MODEL
+    hf_topic_model: str = HF_TOPIC_MODEL
+    hf_toxicity_model: str = HF_TOXICITY_MODEL
+    rerank_top_n: int = 3
+    toxicity_threshold: float = 0.75
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -87,4 +109,13 @@ class Settings:
             max_tokens=int(os.getenv("MAX_TOKENS", "800")),
             top_k=int(os.getenv("TOP_K", "4")),
             redact_pii=os.getenv("REDACT_PII", "true").lower() != "false",
+            use_hf_local=os.getenv("HF_LOCAL_MODELS", "false").lower()
+            in {"1", "true", "yes"},
+            hf_device=os.getenv("HF_DEVICE", "cpu"),
+            hf_embedding_model=os.getenv("HF_EMBEDDING_MODEL", HF_EMBEDDING_MODEL),
+            hf_reranker_model=os.getenv("HF_RERANKER_MODEL", HF_RERANKER_MODEL),
+            hf_topic_model=os.getenv("HF_TOPIC_MODEL", HF_TOPIC_MODEL),
+            hf_toxicity_model=os.getenv("HF_TOXICITY_MODEL", HF_TOXICITY_MODEL),
+            rerank_top_n=int(os.getenv("RERANK_TOP_N", "3")),
+            toxicity_threshold=float(os.getenv("TOXICITY_THRESHOLD", "0.75")),
         )
