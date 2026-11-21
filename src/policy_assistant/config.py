@@ -25,8 +25,30 @@ LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EVAL_DATASET = "bitext/Bitext-customer-support-llm-chatbot-training-dataset"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PROMPT_DIR = REPO_ROOT / "prompts"
-KB_DIR = REPO_ROOT / "data" / "knowledge_base"
+
+
+def _resolve_dir(relative: str, env_var: str) -> Path:
+    """Locate a data directory for both source checkouts and installed wheels.
+
+    Resolution order: explicit environment override, repository root (editable
+    install), current working directory (container image), package directory.
+    """
+
+    override = os.getenv(env_var)
+    candidates = [Path(override)] if override else []
+    candidates += [
+        REPO_ROOT / relative,
+        Path.cwd() / relative,
+        Path(__file__).resolve().parent / relative,
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    return candidates[0]
+
+
+PROMPT_DIR = _resolve_dir("prompts", "PROMPT_DIR")
+KB_DIR = _resolve_dir("data/knowledge_base", "KB_DIR")
 
 
 @dataclass(frozen=True)
