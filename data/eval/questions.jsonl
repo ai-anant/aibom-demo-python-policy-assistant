@@ -1,0 +1,6 @@
+{"question": "What is the hotel limit in tier-1 cities?", "expected_doc": "travel-and-expense"}
+{"question": "How many days per week can I work remotely?", "expected_doc": "remote-work"}
+{"question": "Can I paste customer records into a chat assistant?", "expected_doc": "acceptable-use"}
+{"question": "When are expense reports due after a trip?", "expected_doc": "travel-and-expense"}
+{"question": "Do I need a VPN on a public network?", "expected_doc": "remote-work"}
+{"question": "Which AI models are approved for confidential data?", "expected_doc": "acceptable-use"}

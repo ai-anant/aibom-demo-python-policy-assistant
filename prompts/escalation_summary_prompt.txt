@@ -1,0 +1,8 @@
+Summarise this unanswered policy question for a human reviewer.
+
+Question: {question}
+Draft answer: {draft_answer}
+
+Return one paragraph with: the employee's intent, what policy area is missing,
+and the suggested owner (HR, Finance, Security or Legal). Do not include
+personal data.

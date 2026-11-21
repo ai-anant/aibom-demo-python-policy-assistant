@@ -1,0 +1,10 @@
+Answer the employee question using only the policy context below.
+
+Context:
+{context}
+
+Question: {question}
+
+Write a direct answer in at most three short paragraphs. Cite each policy
+section you rely on as [n]. If the context does not contain the answer, reply
+exactly: "not covered by policy".

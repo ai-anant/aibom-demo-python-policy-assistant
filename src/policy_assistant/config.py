@@ -1,0 +1,68 @@
+"""Runtime configuration and the model catalog for the assistant.
+
+Every model identifier the application can use is declared in this module so
+that an AI bill of materials (AIBOM) scan has a single, resolvable place to
+look. Values can be overridden through environment variables.
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+# --- Model catalog -----------------------------------------------------------
+# Chat / reasoning models
+OPENAI_CHAT_MODEL = "gpt-4o-mini"
+OPENAI_ESCALATION_MODEL = "gpt-4o"
+ANTHROPIC_CHAT_MODEL = "claude-sonnet-4-5"
+
+# Embedding models
+OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+# Hosted dataset used to bootstrap the offline evaluation set
+EVAL_DATASET = "bitext/Bitext-customer-support-llm-chatbot-training-dataset"
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PROMPT_DIR = REPO_ROOT / "prompts"
+KB_DIR = REPO_ROOT / "data" / "knowledge_base"
+
+
+@dataclass(frozen=True)
+class Settings:
+    """Resolved settings for one process."""
+
+    provider: str = "stub"
+    chat_model: str = OPENAI_CHAT_MODEL
+    escalation_model: str = OPENAI_ESCALATION_MODEL
+    embedding_model: str = OPENAI_EMBEDDING_MODEL
+    local_embedding_model: str = LOCAL_EMBEDDING_MODEL
+    vector_store: str = "memory"
+    collection: str = "policy-kb"
+    temperature: float = 0.1
+    max_tokens: int = 800
+    top_k: int = 4
+    redact_pii: bool = True
+
+    @classmethod
+    def from_env(cls) -> "Settings":
+        provider = os.getenv("AI_PROVIDER")
+        if not provider:
+            provider = "openai" if os.getenv("OPENAI_API_KEY") else "stub"
+
+        return cls(
+            provider=provider,
+            chat_model=os.getenv("CHAT_MODEL", OPENAI_CHAT_MODEL),
+            escalation_model=os.getenv("ESCALATION_MODEL", OPENAI_ESCALATION_MODEL),
+            embedding_model=os.getenv("EMBEDDING_MODEL", OPENAI_EMBEDDING_MODEL),
+            local_embedding_model=os.getenv(
+                "LOCAL_EMBEDDING_MODEL", LOCAL_EMBEDDING_MODEL
+            ),
+            vector_store=os.getenv("VECTOR_STORE", "memory"),
+            collection=os.getenv("KB_COLLECTION", "policy-kb"),
+            temperature=float(os.getenv("TEMPERATURE", "0.1")),
+            max_tokens=int(os.getenv("MAX_TOKENS", "800")),
+            top_k=int(os.getenv("TOP_K", "4")),
+            redact_pii=os.getenv("REDACT_PII", "true").lower() != "false",
+        )
