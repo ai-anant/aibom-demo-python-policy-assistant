@@ -15,6 +15,9 @@ find.
 - **Runs offline:** the default `stub` provider needs no API key, so the demo
   works on a laptop or in CI.
 
+> Companion sample: [`aibom-demo-go-triage-agent`](https://github.com/ai-anant/aibom-demo-go-triage-agent) —
+> the same idea implemented in Go, useful for comparing per-language scan depth.
+
 ## What the application does
 
 ```
