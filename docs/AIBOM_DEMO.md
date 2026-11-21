@@ -65,8 +65,8 @@ which is what makes the report usable as a supply-chain artifact.
 
 ## 4. Verified deterministic output
 
-Running only the deterministic stage (Cisco AIBOM 1.10.1, no LLM) on this
-repository reports **33 components**, including:
+Running only the deterministic stage (Cisco AIBOM 1.10.1, no LLM) on a fresh
+clone of this repository reports **36 components**, including:
 
 * models `gpt-4o-mini`, `gpt-4o`, `claude-sonnet-4-5`, `omni-moderation-latest`
 * Hugging Face models `sentence-transformers/all-MiniLM-L6-v2`,
@@ -77,6 +77,10 @@ repository reports **33 components**, including:
 * dependency entries for `langchain*`, `openai`, `chromadb`, `datasets`,
   `sentence-transformers`
 * secret references for `OPENAI_API_KEY`
+
+The count includes identifiers repeated in `README.md`, `docs/` and
+`.env.example`; the raw inventory is therefore a little larger than the number
+of distinct models.
 
 The agentic pass adds prompt assets, removes false positives (for example a
 non-model environment variable picked up by the env resolver) and confirms
